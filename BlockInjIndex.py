@@ -51,7 +51,7 @@ class BlockInjIndex:
         self.inj_table = pd.DataFrame()    
         self.bhp_table = pd.DataFrame()  
         self.kh_table = pd.DataFrame()
-        self.WAF_table = pd.DataFrame() 
+        self.WAF_table_blocks = pd.DataFrame() 
         self.koeff_for_cells = pd.DataFrame()
         self.block_inj_index = pd.DataFrame()
         self.pi_table = pd.DataFrame()
@@ -128,11 +128,17 @@ class BlockInjIndex:
         #input_table["cell"]
         input_table["block"] = map(lambda s: s[:s.find('-', 4)], input_table["Cell"])                 #making new column with block name
         
-        self.WAF_table = pd.pivot_table(input_table, values=['WAF'], aggfunc=np.max, index=['block', 'Well'])  # creating pivot table to extract blocks with its wells, 
-        #                                                                                             #this table later could be used to estrct WAFs       
+        self.WAF_table_blocks = pd.pivot_table(input_table, values=['WAF'], aggfunc=np.max, index=['block', 'Well'])  # creating pivot table to extract blocks with its wells, 
+                                                                                           #this table later could be used to estract WAFs       
         self.blocks_list = list(set(input_table["block"]))
         self.blocks_dict = {a : list(set(input_table[input_table["block"]==a]["Well"])) for a in  self.blocks_list}                        # dictionary block name is key, and for each keycorresponds list of its wells
-        #print self.blocks_dict[blocks_list[0]]
+        #adding fields as bocks
+        t.blocks_dict["US"] = filter(lambda t: t[:2]=="US",  t.cells_list )
+        t.blocks_dict["SVA"] = filter(lambda t: t[:2]=="SV",  t.cells_list )
+        t.blocks_dict["WS"] = filter(lambda t: t[:2]=="WS",  t.cells_list )
+        t.blocks_list.append("US")
+        t.blocks_list.append("WS")
+        t.blocks_list.append("SVA")
         
     
     def cells_mapping(self):
@@ -178,7 +184,7 @@ class BlockInjIndex:
         
     
     def main_calc(self, blocks_list_for_calc=None):
-        self.load_data()
+        #self.load_data()
         if __debug__: print "calculating..."
         #calculating injectors pressure as average of neighbor producers 90dp pressure
         inj_Pres_table = pd.DataFrame()
@@ -217,7 +223,7 @@ class BlockInjIndex:
         # eqclude cells from blocks list 
         big_blocks = list(set(t.blocks_list) - set(t.cells_list))
             
-        #sorting list for beaty
+        #sorting list for beauty
         big_blocks.sort()
         for block in big_blocks:
             if len(blocks_inj_dict[block]) > 0:
@@ -260,6 +266,7 @@ if __name__ == "__main__":
     #if __debug__:
     #    print "Debug"
     t = BlockInjIndex()
+    t.load_data()
     t.main_calc()
     SVA_blocks = filter(lambda t: t[:2]=="SV",t.block_inj_index.columns)
     WS_blocks = filter(lambda t: t[:2]=="WS", t.block_inj_index.columns)
