@@ -19,14 +19,14 @@
      <pointsize>11</pointsize>
     </font>
    </property>
-   <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0">
+   <layout class="QVBoxLayout" name="verticalLayout_8">
+    <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="enabled">
        <bool>true</bool>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="InputFiles">
        <attribute name="title">
@@ -225,9 +225,12 @@
            <bool>true</bool>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="text_enter_blocks">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="geometry">
             <rect>
              <x>0</x>
@@ -264,8 +267,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>741</width>
-             <height>375</height>
+             <width>106</width>
+             <height>111</height>
             </rect>
            </property>
            <attribute name="label">
@@ -275,7 +278,25 @@
             <item>
              <layout class="QVBoxLayout" name="verticalLayout_5">
               <item>
-               <widget class="QListWidget" name="listWidget"/>
+               <widget class="QCheckBox" name="select_all_check_box">
+                <property name="font">
+                 <font>
+                  <pointsize>12</pointsize>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Select all</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QListView" name="listView">
+                <property name="font">
+                 <font>
+                  <pointsize>12</pointsize>
+                 </font>
+                </property>
+               </widget>
               </item>
              </layout>
             </item>
@@ -304,31 +325,65 @@
        <attribute name="title">
         <string>Plots</string>
        </attribute>
-       <layout class="QHBoxLayout" name="horizontalLayout_10">
-        <item>
+       <layout class="QGridLayout" name="gridLayout_2">
+        <item row="0" column="0">
          <widget class="QSplitter" name="splitter">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
-          <widget class="QListWidget" name="list_of_blocks_to_plot"/>
+          <widget class="QScrollArea" name="scrollArea">
+           <property name="widgetResizable">
+            <bool>true</bool>
+           </property>
+           <widget class="QWidget" name="scrollAreaWidgetContents_2">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>286</width>
+              <height>486</height>
+             </rect>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>5</width>
+              <height>12</height>
+             </size>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_9">
+             <item>
+              <widget class="QCheckBox" name="plots_select_all">
+               <property name="text">
+                <string>Select All</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QListView" name="listView_2"/>
+             </item>
+            </layout>
+           </widget>
+          </widget>
           <widget class="QWidget" name="layoutWidget">
            <layout class="QVBoxLayout" name="verticalLayout_6">
+            <item>
+             <spacer name="horizontalSpacer_6">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
             <item>
              <widget class="MatplotlibWidget" name="matplotlibwidget"/>
             </item>
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout">
-              <item>
-               <widget class="QDateEdit" name="start_time_edit">
-                <property name="date">
-                 <date>
-                  <year>2013</year>
-                  <month>12</month>
-                  <day>31</day>
-                 </date>
-                </property>
-               </widget>
-              </item>
               <item>
                <spacer name="horizontalSpacer">
                 <property name="orientation">
@@ -350,6 +405,26 @@
                </widget>
               </item>
               <item>
+               <spacer name="horizontalSpacer_3">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="clear_plot_button">
+                <property name="text">
+                 <string>Clear</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <spacer name="horizontalSpacer_2">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -361,17 +436,6 @@
                  </size>
                 </property>
                </spacer>
-              </item>
-              <item>
-               <widget class="QDateEdit" name="end_time_edit">
-                <property name="date">
-                 <date>
-                  <year>2015</year>
-                  <month>11</month>
-                  <day>1</day>
-                 </date>
-                </property>
-               </widget>
               </item>
              </layout>
             </item>
@@ -461,38 +525,6 @@
     <hint type="destinationlabel">
      <x>381</x>
      <y>298</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>Ndp_file_button</sender>
-   <signal>clicked()</signal>
-   <receiver>menubar</receiver>
-   <slot>raise()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>703</x>
-     <y>166</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>381</x>
-     <y>11</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>start_time_edit</sender>
-   <signal>dateChanged(QDate)</signal>
-   <receiver>menubar</receiver>
-   <slot>raise()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>357</x>
-     <y>540</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>381</x>
-     <y>11</y>
     </hint>
    </hints>
   </connection>
