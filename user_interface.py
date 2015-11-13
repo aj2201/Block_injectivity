@@ -43,6 +43,7 @@ class user_interface(Ui_MainWindow):
         
     def setupUi2(self, MainWindow):
         self.setupUi(MainWindow)
+        self.object = MainWindow
         #self.statusbar = QtGui.QStatusBar(MainWindow)
         font = QtGui.QFont()
         font.setPointSize(10)
@@ -57,6 +58,8 @@ class user_interface(Ui_MainWindow):
         self.toolBox.setCurrentIndex(1)
         self.navi_toolbar = NavigationToolbar(self.matplotlibwidget, self.OutputPlots)
         self.verticalLayout_6.addChildWidget(self.navi_toolbar)
+        self.object.statusBar().showMessage('Ready')
+        
         
         
     def setup_connections(self):
@@ -84,11 +87,11 @@ class user_interface(Ui_MainWindow):
         
         
     def clear_plot(self):
-        print "clear"
+        self.object.statusBar().showMessage('Plots area cleared')
         self.matplotlibwidget.figure.clear()
         self.matplotlibwidget.draw()
         #self.matplotlibwidget.update()
-        print "clear 2"
+        
         
     def plot(self):
         self.matplotlibwidget.axes.clear()
@@ -113,6 +116,7 @@ class user_interface(Ui_MainWindow):
         print 4
         df.plot(subplots=True, layout=(v,h), ax=self.matplotlibwidget.axes)
         self.matplotlibwidget.draw()
+        self.object.statusBar().showMessage('Plots ')
         
         
     def add_plot_list(self):
