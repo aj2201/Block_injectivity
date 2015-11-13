@@ -56,7 +56,7 @@ class BlockInjIndex:
         self.cells_dict  = {}
         self.blocks_list = []
         self.cells_list = []
-        #self.big_blocks = []
+        #self.blocks_list_for_calc = []
         
     def load_inj_rates_PT(self):  #ToDo: use pivot table!
         """
@@ -135,6 +135,7 @@ class BlockInjIndex:
         self.blocks_list.append("US")
         self.blocks_list.append("WS")
         self.blocks_list.append("SVA")
+        self.blocks_list.sort()
         
     
     def cells_mapping(self):
@@ -174,7 +175,8 @@ class BlockInjIndex:
         self.cells_mapping()
         self.blocks_mapping()
         
-        if True: print "data loaded"   
+        #if False: 
+        print "data loaded bii"   
     
     
         
@@ -182,7 +184,7 @@ class BlockInjIndex:
     
     def injectivity_skin_calc(self, blocks_list_for_calc=None):
         #self.load_data()
-        #if __debug__: print "calculating..."
+        if __debug__: print "calculating..."
         #calculating injectors pressure as average of neighbor producers 90dp pressure
         inj_Pres_table = pd.DataFrame()
         for injector in self.cells_list:  #cell contain injector and surrounding producers
@@ -218,11 +220,12 @@ class BlockInjIndex:
         # deleting from blocks_dict all producers, since for blocks injectivity calculating only injectors requried
         blocks_inj_dict = {a: list(set(self.blocks_dict[a]) & set(self.cells_list)) for a in self.blocks_list}
         # eqclude cells from blocks list 
-        big_blocks = list(set(self.blocks_list) - set(self.cells_list))
+        if blocks_list_for_calc==None:
+            blocks_list_for_calc = list(set(self.blocks_list) - set(self.cells_list))
             
         #sorting list for beauty
-        big_blocks.sort()
-        for block in big_blocks:
+        blocks_list_for_calc.sort()
+        for block in blocks_list_for_calc:
             if len(blocks_inj_dict[block]) > 0:
                 self.block_inj_index[block] = pd.DataFrame([self.inj_index.T[injector] for injector in blocks_inj_dict[block]]).median(axis=0, skipna=True)
             else: 
