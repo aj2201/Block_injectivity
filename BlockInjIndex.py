@@ -162,7 +162,7 @@ class BlockInjIndex:
         """
         loading data
         """
-        if False: #__debug__:
+        if False:
             print "loading data from files:"
             print "\t*", self.NinetyInputFile
             print "\t*",self.InjOfmFile
@@ -176,7 +176,7 @@ class BlockInjIndex:
         self.blocks_mapping()
         
         #if False: 
-        print "data loaded bii"   
+        if False: print "data loaded bii"   
     
     
         
@@ -184,7 +184,7 @@ class BlockInjIndex:
     
     def injectivity_skin_calc(self, blocks_list_for_calc=None):
         #self.load_data()
-        if __debug__: print "calculating..."
+        if False: print "calculating..."
         #calculating injectors pressure as average of neighbor producers 90dp pressure
         inj_Pres_table = pd.DataFrame()
         for injector in self.cells_list:  #cell contain injector and surrounding producers
@@ -272,6 +272,6 @@ if __name__ == "__main__":
     SVA_blocks = filter(lambda t: t[:2]=="SV",t.block_inj_index.columns)
     WS_blocks = filter(lambda t: t[:2]=="WS", t.block_inj_index.columns)
     US_blocks = filter(lambda t: t[:2]=="US", t.block_inj_index.columns)
-    t.plot_list(WS_blocks)
+    t.plot_list(SVA_blocks)
     #grouped_weighted_avg(values=df.wt, weights=df.value, by=df.index)
 """
