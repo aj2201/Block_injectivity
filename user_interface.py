@@ -12,7 +12,10 @@ from matplotlib.backends.backend_qt4 import NavigationToolbar2QT as NavigationTo
 from BlockInjIndex import BlockInjIndex
 from Ui_AboutWidget import Ui_AboutWidget
 from Ui_MainWindow import Ui_MainWindow
-
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_qt4agg \
+ import FigureCanvasQTAgg as FigureCanvas
+ 
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -59,6 +62,7 @@ class user_interface(Ui_MainWindow):
         self.navi_toolbar = NavigationToolbar(self.matplotlibwidget, self.OutputPlots)
         self.verticalLayout_6.addChildWidget(self.navi_toolbar)
         self.object.statusBar().showMessage('Ready')
+        self.big_blocks_checkBox.setChecked(True)
         
         
         
@@ -72,6 +76,7 @@ class user_interface(Ui_MainWindow):
         QtCore.QObject.connect(self.plots_select_all, QtCore.SIGNAL(_fromUtf8("stateChanged(int)")),self.plot_select_all_function)
         QtCore.QObject.connect(self.plot_update_button, QtCore.SIGNAL(_fromUtf8("clicked()")), self.plot)
         QtCore.QObject.connect(self.clear_plot_button, QtCore.SIGNAL(_fromUtf8("clicked()")), self.clear_plot)
+        QtCore.QObject.connect(self.big_blocks_checkBox, QtCore.SIGNAL(_fromUtf8("stateChanged(int)")),self.big_blocks_display)
     
     def setup_file_open_dialogs(self):
         self.Ndp_file_edit.setText(self.bii.NinetyInputFile)
@@ -113,7 +118,6 @@ class user_interface(Ui_MainWindow):
         if plots_number < 4:
             v = int(np.min([3., plots_number]))
             h = 1
-        print 4
         df.plot(subplots=True, layout=(v,h), ax=self.matplotlibwidget.axes)
         self.matplotlibwidget.draw()
         self.object.statusBar().showMessage('Plots ')
@@ -137,32 +141,34 @@ class user_interface(Ui_MainWindow):
             item = model.item(index)
             if item.isCheckable():
                 item.setCheckState(state)
+    
         
     def load_blocks_list(self):
-        print "load blocks"
+        
+        self.object.statusBar().showMessage('blocks list loading')
         the_list = []
         model = self.listView.model()
         for index in range(model.rowCount()):
             item = model.item(index)
             if item.checkState():
                 the_list.append(item.text())
-                print item.text()
         self.blocks_list_for_analysis = the_list
-        #print the_list
         self.bii.injectivity_skin_calc(self.blocks_list_for_analysis)
-        #print self.bii.block_inj_index.head(1)
         self.add_plot_list()
-        
+        self.object.statusBar().showMessage('blocks list loaded')
              
     def clear(self):
         #TODO: clear all tabs
         self.__init__()
         self.setup_file_open_dialogs()
         self.listView.setModel(QtGui.QStandardItemModel())
+        self.clear_plot()
+        self.listView_2.setModel(QtGui.QStandardItemModel())
         #gc.collect()
-        #self.statusBar.showMessage('Data cleared')
+        self.object.statusBar().showMessage('Data cleared')
     
     def load_input_files(self):
+        self.object.statusBar().showMessage('data loading, it takes minute')
         #QtGui.QMessageBox.about(None, "Message", "start")
         #self.statusBar.showMessage('start to data load')
         if (not QtCore.QFile.exists(self.Ndp_file_edit.text())) | \
@@ -171,7 +177,7 @@ class user_interface(Ui_MainWindow):
             (not QtCore.QFile.exists(self.blocks_file_edit.text())) | \
             (not QtCore.QFile.exists(self.cells_file_edit.text())) :
             #QtGui.QMessageBox.about(None, "Message", "Data not loaded\n one of input files doesn't exists")
-            print "bad"
+            self.object.statusBar().showMessage('Data not loaded one of input files doesn\'t exists')
             return
         
         self.bii.NinetyInputFile = self.Ndp_file_edit.text()
@@ -180,15 +186,24 @@ class user_interface(Ui_MainWindow):
         self.bii.BlockMappingFile = self.blocks_file_edit.text()
         self.bii.CellMappingFile = self.cells_file_edit.text()
         self.bii.load_data()
-        #QtGui.QMessageBox.about(None, "Message", "Data loaded")
-        print "Data loaded here"
         self.create_check_boxes()
+        self.object.statusBar().showMessage('Data loaded')
+     
+    def big_blocks_display(self, state=QtCore.Qt.Checked):
+        self.create_check_boxes(state)
         
-    def create_check_boxes(self):
+    def create_check_boxes(self, state=QtCore.Qt.Checked):
         """create dynamycally list of checkboxes from blocks_list"""
         model = QtGui.QStandardItemModel()
         check = QtCore.Qt.Unchecked
-        for n in self.bii.blocks_list :                   
+        if state==QtCore.Qt.Checked:
+            list_for_display = list(set(self.bii.blocks_list) - set(self.bii.cells_list))
+            print "big blocks only"
+        else:
+            list_for_display = self.bii.blocks_list
+            print "not big blocks only"
+        list_for_display.sort()
+        for n in list_for_display:                   
             item = QtGui.QStandardItem(n)
             item.setCheckState(check)
             item.setCheckable(True)
