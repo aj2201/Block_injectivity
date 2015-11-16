@@ -198,10 +198,8 @@ class user_interface(Ui_MainWindow):
         check = QtCore.Qt.Unchecked
         if state==QtCore.Qt.Checked:
             list_for_display = list(set(self.bii.blocks_list) - set(self.bii.cells_list))
-            print "big blocks only"
         else:
             list_for_display = self.bii.blocks_list
-            print "not big blocks only"
         list_for_display.sort()
         for n in list_for_display:                   
             item = QtGui.QStandardItem(n)
