@@ -45,9 +45,16 @@ class ProdInjRatioCalc(BlockInjIndex.BlockInjIndex):
                   / wafed_liqs.T.sum()
         self.block_prod_skin_table.index = self.block_prod_skin_table.index.droplevel()
         
-    def pi_ratio_calc(self):
+    def pi_ratio_calc(self, blocks_list_for_calc=None):
         #self.pi_ratio_table = pd.DataFrame()
-        
+        self.prod_inj_table = pd.DataFrame()
+        if blocks_list_for_calc==None:
+                blocks_list_for_calc = self.blocks_list
+        for block in blocks_list_for_calc:
+            i_skin = self.block_inj_skin_table[block]
+            p_skin = self.block_prod_skin_table[block]
+            k = self.prod_inj_ratio_nominal[block]
+            self.prod_inj_ratio_table[block] = k*(pvt.PVTprops.p_avg_D_pat + i_skin)/(pvt.PVTprops.p_avg_D_pat + p_skin)
         return                
 
 if __name__=="__main__":
