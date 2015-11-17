@@ -4,18 +4,15 @@ Created on Fri Nov 06 17:18:52 2015
 
 @author: Aygul.Ibatullina
 """
-from PyQt4 import QtCore, QtGui
+from PyQt4 import QtCore
+from PyQt4 import  QtGui
 import sys
 import numpy as np
-import pandas as pd
 from matplotlib.backends.backend_qt4 import NavigationToolbar2QT as NavigationToolbar
 from BlockInjIndex import BlockInjIndex
 from Ui_AboutWidget import Ui_AboutWidget
 from Ui_MainWindow import Ui_MainWindow
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_qt4agg \
- import FigureCanvasQTAgg as FigureCanvas
- 
+
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -108,7 +105,7 @@ class user_interface(Ui_MainWindow):
                 the_list.append(item.text())
         
         if len(the_list)>0:
-            df = self.bii.block_inj_index[the_list]
+            df = self.bii.block_inj_skin_table[the_list]
         else: 
             return
         
@@ -133,6 +130,7 @@ class user_interface(Ui_MainWindow):
             item.setCheckable(True)
             model.appendRow(item)
         self.listView_2.setModel(model)
+        #self.tabWidget.currentChanged(2)
         
     def plot_select_all_function(self, state=QtCore.Qt.Checked):
         """Select All layers loaded inside the listView"""
@@ -142,9 +140,7 @@ class user_interface(Ui_MainWindow):
             if item.isCheckable():
                 item.setCheckState(state)
     
-        
     def load_blocks_list(self):
-        
         self.object.statusBar().showMessage('blocks list loading')
         the_list = []
         model = self.listView.model()
@@ -153,7 +149,8 @@ class user_interface(Ui_MainWindow):
             if item.checkState():
                 the_list.append(item.text())
         self.blocks_list_for_analysis = the_list
-        self.bii.injectivity_skin_calc(self.blocks_list_for_analysis)
+        self.object.statusBar().showMessage('calculating parameters')
+        self.bii.block_inj_skin_calc(self.blocks_list_for_analysis)
         self.add_plot_list()
         self.object.statusBar().showMessage('blocks list loaded')
              
