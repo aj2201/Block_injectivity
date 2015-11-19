@@ -49,7 +49,7 @@ class BlockInjIndex:
         self.kh_table = pd.DataFrame()
         self.WAF_table_blocks = pd.DataFrame() 
         self.koeff_for_cells = pd.DataFrame()
-        self.block_inj_index = pd.DataFrame()
+        self.block_inj_skin_table = pd.DataFrame()
         self.pi_table = pd.DataFrame()
         self.Qliq_table = pd.DataFrame()
         self.blocks_dict = {}
@@ -137,7 +137,6 @@ class BlockInjIndex:
 #        self.blocks_list.append("US")
 #        self.blocks_list.append("WS")
 #        self.blocks_list.append("SVA")
-        #TODO: adding WAFs for fields
         self.blocks_list.sort()    
     
     def cells_mapping(self):
@@ -160,11 +159,11 @@ class BlockInjIndex:
         wafs = self.WAF_table_blocks.copy()
         wafs.reset_index(inplace=True)
         wafs["isInj"] = [ a in set(self.cells_list) for a in wafs["Well"].values]
-        wafs["injectors"] = wafs["WAF"]* (1 - wafs["isInjector"])
-        wafs["producers"] = wafs["WAF"]* wafs["isInjector"]
+        wafs["injectors"] = wafs["WAF"]* (1 - wafs["isInj"])
+        wafs["producers"] = wafs["WAF"]* wafs["isInj"]
         e = wafs.groupby("block").sum()
         e["P/I"] = e["producers"]/e["injectors"]
-        self.prod_inj_ratio = e["P/I"]
+        self.prod_inj_ratio_nominal = e["P/I"]
 
     
     def calc_pattern_pres(self):
@@ -183,6 +182,7 @@ class BlockInjIndex:
         self.load_kh()
         self.cells_mapping()
         self.blocks_mapping()        
+        self.nominal_prod_inj_ratio_calc()
     
     def injectivity_skin_calc(self):
         """
@@ -191,6 +191,7 @@ class BlockInjIndex:
         #self.load_data()
         #calculating injectors pressure as average of neighbor producers 90dp pressure
         inj_Pres_table = pd.DataFrame()
+        #TODO: Pres as PI weighted average
         for injector in self.cells_list:  #cell contain injector and surrounding producers
            neighbors = self.cells_dict.get(injector)  # getting neighbors list
            #neighbors = neighbors[neighbors!=injector]
@@ -232,7 +233,7 @@ class BlockInjIndex:
         blocks_inj_dict = {a: list(set(self.blocks_dict[a]) & set(self.cells_list) & set(self.inj_table.T.index)) for a in self.blocks_list}
         # eqclude cells from blocks list 
         if blocks_list_for_calc==None:
-            blocks_list_for_calc = list(set(self.blocks_list) - set(self.cells_list))
+            blocks_list_for_calc = self.blocks_list
         #sorting list for beauty
         blocks_list_for_calc.sort()
         for block in blocks_list_for_calc:
@@ -243,21 +244,21 @@ class BlockInjIndex:
                 block_inj_rates = self.inj_table[injectors]
                 block_inj_skins = self.inj_index.T[injectors]
                 #assumed that there arent injectors with WAF<1
-                self.block_inj_index[block] = (block_inj_skins*block_inj_rates).T.sum() / block_inj_rates.T.sum()
+                self.block_inj_skin_table[block] = (block_inj_skins*block_inj_rates).T.sum() / block_inj_rates.T.sum()
             else: 
                 #if __debug__: print block, "is empty [injectors didn't found]"
-                self.block_inj_index[block] =  np.nan
-        #self.block_inj_index[self.block_inj_index>1000]=np.nan
-        self.block_inj_index.sort_index
-        self.block_inj_index.index = self.block_inj_index.index.droplevel()
-        #the results of calc is self.block_inj_index
+                self.block_inj_skin_table[block] =  np.nan
+        #self.block_inj_skin_table[self.block_inj_skin_table>1000]=np.nan
+        self.block_inj_skin_table.sort_index
+        self.block_inj_skin_table.index = self.block_inj_skin_table.index.droplevel()
+        #the results of calc is self.block_inj_skin_table
     
     def plot_list(self, blocks_list):
-        #df = pd.DataFrame({a: self.block_inj_index[a] for a in blocks_list })
+        #df = pd.DataFrame({a: self.block_inj_skin_table[a] for a in blocks_list })
         if len(blocks_list)>0:
-            df = self.block_inj_index[blocks_list]
+            df = self.block_inj_skin_table[blocks_list]
         else: 
-            df = self.block_inj_index
+            df = self.block_inj_skin_table
         plots_number = float(len(df.columns))
         v = int(np.ceil(plots_number ** 0.5))
         h = int(np.ceil(plots_number / v ))
@@ -267,12 +268,12 @@ class BlockInjIndex:
         df.plot(subplots=True, layout=(v,h))
     
     def plot_block(self, block_name):
-        df = pd.DataFrame(self.block_inj_index[block_name])
+        df = pd.DataFrame(self.block_inj_skin_table[block_name])
         df = df[np.isnan(df)==False]
         df.plot()
     
     def save_as_csv(self, file_name="out.csv"):
-        self.block_inj_index.T.to_csv(file_name,sep=';')      
+        self.block_inj_skin_table.T.to_csv(file_name,sep=';')      
 
 if __name__ == "__main__":
     #if __debug__:
@@ -281,8 +282,8 @@ if __name__ == "__main__":
     t.load_data()
     t.block_inj_skin_calc()
     
-    SVA_blocks = filter(lambda t: t[:2]=="SV",t.block_inj_index.columns)
-    WS_blocks = filter(lambda t: t[:2]=="WS", t.block_inj_index.columns)
-    US_blocks = filter(lambda t: t[:2]=="US", t.block_inj_index.columns)
+    SVA_blocks = filter(lambda t: t[:2]=="SV",t.block_inj_skin_table.columns)
+    WS_blocks = filter(lambda t: t[:2]=="WS", t.block_inj_skin_table.columns)
+    US_blocks = filter(lambda t: t[:2]=="US", t.block_inj_skin_table.columns)
     t.plot_list(["SVA"])
     
