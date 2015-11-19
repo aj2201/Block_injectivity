@@ -26,7 +26,7 @@ class ProdInjRatioCalc(BlockInjIndex.BlockInjIndex):
         self.prod_skin_table = pd.DataFrame(table.values*alpha_df.values, index=table.index, columns=table.columns) + beta_coef
         #self.prod_skin_table.columns = "ProdSkin"
         self.prod_skin_table = self.prod_skin_table.T
-        
+        self.prod_skin_table.index = self.prod_skin_table.index.droplevel()
     
     def block_prod_skin_calc(self, blocks_list_for_calc=None):
         self.prod_skin_calc()
@@ -47,7 +47,9 @@ class ProdInjRatioCalc(BlockInjIndex.BlockInjIndex):
         
     def pi_ratio_calc(self, blocks_list_for_calc=None):
         #self.pi_ratio_table = pd.DataFrame()
-        self.prod_inj_table = pd.DataFrame()
+        self.block_inj_skin_calc(blocks_list_for_calc)
+        self.block_prod_skin_calc(blocks_list_for_calc)
+        self.prod_inj_ratio_table = pd.DataFrame()
         if blocks_list_for_calc==None:
                 blocks_list_for_calc = self.blocks_list
         for block in blocks_list_for_calc:
@@ -60,8 +62,7 @@ class ProdInjRatioCalc(BlockInjIndex.BlockInjIndex):
 if __name__=="__main__":
     t = ProdInjRatioCalc()
     t.load_data()
-    t.block_inj_skin_calc()
-    t.block_prod_skin_calc()
+    t.pi_ratio_calc()
     SVA_blocks = filter(lambda t: t[:2]=="SV",t.block_inj_skin_table.columns)
     WS_blocks = filter(lambda t: t[:2]=="WS", t.block_inj_skin_table.columns)
     US_blocks = filter(lambda t: t[:2]=="US", t.block_inj_skin_table.columns)
