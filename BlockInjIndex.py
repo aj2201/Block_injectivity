@@ -64,6 +64,7 @@ class BlockInjIndex:
             @name(), Date, MonthlyWaterInj.VolumeTot, MonthlyWaterInj.Days, avg_BhpInjTopPerfFaily
         """
         df = pd.read_table(self.InjOfmFile, ",")
+        df.columns = map(lambda x: x.replace(" ", ""), df.columns)
         df['Date'] = pd.to_datetime(df['Date'])
         df["InjRate"] = df["MonthlyWaterInj.VolumeTot"] / df["MonthlyWaterInj.Days"] 
         #df["Date"] = self.year_month(df["Date"]) #to avoid porblems with days (last vs first)
@@ -82,6 +83,7 @@ class BlockInjIndex:
         # @name(), Date,  Ninetydaysplan.Pres, Ninetydaysplan.Pi, Ninetydaysplan.Qgross 
         """
         df = pd.read_table(self.NinetyInputFile, ",")
+        df.columns = map(lambda x: x.replace(" ", ""), df.columns)
         df['Date'] = pd.to_datetime(df['Date'])
         df["Pres"] = df["Ninetydaysplan.Pres"]
         df["Pi"] = df["Ninetydaysplan.Pi"] 
@@ -101,7 +103,8 @@ class BlockInjIndex:
         Oil Saturation;Saturation;If exist perforation;;
         """
         filename = self.InterpFile  # for each filed (sva, ws, us)
-        df = pd.read_table(filename, ";")#,error_bad_lines=False)
+        if filename[-5:]==".xlsx": df = pd.read_excel(filename)
+        else: df = pd.read_table(filename, ";")#,error_bad_lines=False)
         df['Perforation'] = df['If exist perforation'] =='perforated'
         df['kh'] = df['Perforation']*df['Brine Permeability']*df['Sublayer Height TVD']  # add a column with perforated kh of  interval
         self.kh_table = pd.pivot_table(df, values=['kh'], index=['Well Name'], aggfunc=np.sum)
@@ -177,6 +180,7 @@ class BlockInjIndex:
         """
         loading input data
         """
+        #import pdb; pdb.set_trace()
         self.load_inj_rates_PT()
         self.load_90dp_PT()
         self.load_kh()
