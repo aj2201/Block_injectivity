@@ -245,10 +245,14 @@ class BlockInjIndex:
                 #TODO: weight average
                 #block_injectors_skins = pd.DataFrame([self.inj_index.T[injector] for injector in blocks_inj_dict[block]])
                 injectors = blocks_inj_dict[block]
-                block_inj_rates = self.inj_table[injectors]
+                #block_inj_rates = self.inj_table[injectors]
+                liq_rates = self.inj_table[injectors]
+                wafs = self.WAF_table_blocks["WAF"][block][injectors]
+                wafed_liqs = liq_rates * wafs
+            
                 block_inj_skins = self.inj_index.T[injectors]
                 #assumed that there arent injectors with WAF<1
-                self.block_inj_skin_table[block] = (block_inj_skins*block_inj_rates).T.sum() / block_inj_rates.T.sum()
+                self.block_inj_skin_table[block] = (block_inj_skins*wafed_liqs).T.sum() / wafed_liqs.T.sum() #block_inj_rates
             else: 
                 #if __debug__: print block, "is empty [injectors didn't found]"
                 self.block_inj_skin_table[block] =  np.nan
@@ -282,7 +286,7 @@ class BlockInjIndex:
 if __name__ == "__main__":
     #if __debug__:
     #    print "Debug"
-    t = BlockInjIndex()
+    t = BlockInjIndex(NinetyDaysPresInputFileStr="./FullInput/90dpfrom2011.txt", InjOfmFileStr ="./FullInput/injOfmfrom2011.txt" )
     t.load_data()
     t.block_inj_skin_calc()
     
