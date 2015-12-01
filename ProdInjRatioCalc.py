@@ -10,8 +10,10 @@ import BlockInjIndex
 import PVTprops as pvt
 
 class ProdInjRatioCalc(BlockInjIndex.BlockInjIndex):
-    def __init__(self):
-        BlockInjIndex.BlockInjIndex.__init__(self)
+    def __init__(self, NinetyDaysPresInputFileStr=".\input\\NinetyDaysPresInputFile.txt", \
+    InjOfmFileStr=".\input\\InjOfmFile.txt", BlockMappingFileInput='.\input\\blocks_mapping.csv',\
+    CellsMappingFileInput = '.\input\\cells_mapping.csv'):
+        BlockInjIndex.BlockInjIndex.__init__(self, NinetyDaysPresInputFileStr, InjOfmFileStr, BlockMappingFileInput,CellsMappingFileInput )
         
     def prod_skin_calc(self):
         table = self.pi_table.T.copy()
@@ -60,7 +62,11 @@ class ProdInjRatioCalc(BlockInjIndex.BlockInjIndex):
         return                
 
 if __name__=="__main__":
-    t = ProdInjRatioCalc()
+    """    NinetyDaysPresInputFileStr=".\input\\NinetyDaysPresInputFile.txt", \
+    InjOfmFileStr=".\input\\InjOfmFile.txt", BlockMappingFileInput='.\input\\blocks_mapping.csv',\
+    CellsMappingFileInput = '.\input\\cells_mapping.csv')"""
+    import pdb;pdb.set_trace()
+    t = ProdInjRatioCalc(NinetyDaysPresInputFileStr="./FullInput/NinetyDaysPresInputFile.txt", InjOfmFileStr ="./FullInput/InjOfmFile.txt" )
     t.load_data()
     t.pi_ratio_calc()
     SVA_blocks = filter(lambda t: t[:2]=="SV",t.block_inj_skin_table.columns)
