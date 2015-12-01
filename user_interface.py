@@ -7,8 +7,10 @@ Created on Fri Nov 06 17:18:52 2015
 
 """
 import sys
+import operator
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from PyQt4 import QtCore
 from PyQt4 import  QtGui
@@ -17,7 +19,7 @@ from matplotlib.backends.backend_qt4 import NavigationToolbar2QT as NavigationTo
 from ProdInjRatioCalc import ProdInjRatioCalc
 from Ui_AboutWidget import Ui_AboutWidget
 from Ui_MainWindow import Ui_MainWindow
-
+from Ui_PlotsSaveDialog import Ui_PlotsSaveDialog
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -32,8 +34,51 @@ try:
 except AttributeError:
     def _translate(context, text, disambig):
         return QtGui.QApplication.translate(context, text, disambig)
+
+class PandasModel(QtCore.QAbstractTableModel):
+    """
+    Class to populate a table view with a pandas dataframe
+    """
+    def __init__(self, data, parent=None):
+        QtCore.QAbstractTableModel.__init__(self, parent)
+        self._data = data
+
+    def rowCount(self, parent=None):
+        return len(self._data.values)
+
+    def columnCount(self, parent=None):
+        return self._data.columns.size
+
+    def data(self, index, role=QtCore.Qt.DisplayRole):
+        if index.isValid():
+            if role == QtCore.Qt.DisplayRole:
+                return str(self._data.values[index.row()][index.column()])
+        return None
+
+    def headerData(self, col, orientation, role):
+        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+            return self._data.columns[col]
+        return None
         
-  
+    def sort(self, col, order):
+        """sort table by given column number col"""
+        self.emit(QtCore.SIGNAL("layoutAboutToBeChanged()"))
+        self.mydata = sorted(self.mydata,
+            key=operator.itemgetter(col))
+        if order == QtCore.Qt.DescendingOrder:
+            self.mydata.reverse()
+        self.emit(QtCore.SIGNAL("layoutChanged()"))
+
+
+class NumberSortModel(QtGui.QSortFilterProxyModel):
+
+    def lessThan(self, left, right):
+    
+        lvalue = left.data().toDouble()[0]
+        rvalue = right.data().toDouble()[0]
+        return lvalue < rvalue  
+
+     
 class UserInterface(Ui_MainWindow):
     def __init__(self):
         self.pir_calc = ProdInjRatioCalc()
@@ -41,7 +86,6 @@ class UserInterface(Ui_MainWindow):
         self.about_w = Ui_AboutWidget()
         self.inputs_load = 0
         self.blocks_list_for_analysis = []
-        #self.setupUi2()
         
     def setupUi2(self, MainWindow):
         self.setupUi(MainWindow)
@@ -53,16 +97,22 @@ class UserInterface(Ui_MainWindow):
         self.setup_file_open_dialogs()
         #QtCore.QObject.connect(self.start_time_edit, QtCore.SIGNAL(_fromUtf8("dateChanged(QDate)")), self.menubar.raise_)
         filename = "./input/!readMe.txt"
-        file=open(filename)
-        data = file.read()
+        try:
+            file_readMe=open(filename)
+            data = file_readMe.read()
+        except IOError:
+            data = "!readMe.txt file not found"
+                        
+        #data = file_readMe.read()
+        
+        data = data.decode("utf-8")
         self.input_file_help_text.setText(data)
         self.tabWidget.setCurrentIndex(0)
         self.navi_toolbar = NavigationToolbar(self.matplotlibwidget, self.OutputPlots)
         self.verticalLayout_6.addChildWidget(self.navi_toolbar)
         self.object.statusBar().showMessage('Ready')
         self.big_blocks_checkBox.setChecked(True)
-        
-        
+        #self.tableView_snapshot = DataFrameWidget()
         
     def setup_connections(self):
         QtCore.QObject.connect(self.load_input_files_button, QtCore.SIGNAL(_fromUtf8("clicked()")), self.load_input_files)
@@ -74,7 +124,11 @@ class UserInterface(Ui_MainWindow):
         QtCore.QObject.connect(self.plots_select_all, QtCore.SIGNAL(_fromUtf8("stateChanged(int)")),self.plot_select_all_function)
         QtCore.QObject.connect(self.plot_update_button, QtCore.SIGNAL(_fromUtf8("clicked()")), self.plot_new)
         QtCore.QObject.connect(self.clear_plot_button, QtCore.SIGNAL(_fromUtf8("clicked()")), self.clear_plot)
+        QtCore.QObject.connect(self.pushButton_save_plots, QtCore.SIGNAL(_fromUtf8("clicked()")), self.save_plots_to_file)
         QtCore.QObject.connect(self.big_blocks_checkBox, QtCore.SIGNAL(_fromUtf8("stateChanged(int)")),self.big_blocks_display)
+        QtCore.QObject.connect(self.pushButton_save_pir_table_to_file, QtCore.SIGNAL(_fromUtf8("clicked()")), self.save_pir_table_to_file)
+        QtCore.QObject.connect(self.pushButton_save_iskin_table_to_file, QtCore.SIGNAL(_fromUtf8("clicked()")), self.save_iskin_table_to_file)
+        QtCore.QObject.connect(self.pushButton_save_pskin_table_to_file, QtCore.SIGNAL(_fromUtf8("clicked()")), self.save_pskin_table_to_file)
     
     def setup_file_open_dialogs(self):
         self.Ndp_file_edit.setText(self.pir_calc.NinetyInputFile)
@@ -89,6 +143,107 @@ class UserInterface(Ui_MainWindow):
         QtCore.QObject.connect(self.blocks_file_button, QtCore.SIGNAL(_fromUtf8("clicked()")), self.blocks_file_dialog)        
         
         
+    def load_tables(self):
+        the_list = []
+        #extract list from listView2 to plot 
+        model = self.listView.model()
+        for index in range(model.rowCount()):
+            item = model.item(index)
+            if item.checkState():
+                the_list.append(item.text())
+        #to avoid problems with interacting of pandas and qtstring
+        the_list = map(str, the_list)
+        #i skin
+        self.table_load(the_list, self.pir_calc.block_inj_skin_table, self.tableView_inj_skin)
+        self.table_load(the_list, self.pir_calc.block_prod_skin_table, self.tableView_prod_skin)
+        self.table_load(the_list, self.pir_calc.prod_inj_ratio_table, self.tableView_pi_ratio)
+        
+        
+        
+    def table_load(self, the_list, source_table, tableView):
+        #import pdb; pdb.set_trace()
+        df = source_table[the_list].T.copy()
+        #df.values = map(np.round,df.values, 3)
+        df.columns = map(lambda x: x.strftime('%d-%m-%Y'), df.columns)
+        df.reset_index(level=0, inplace=True)        
+        model = PandasModel(df)
+        #import pdb; pdb.set_trace()
+        proxy = QtGui.QSortFilterProxyModel() #NumberSortModel()
+        proxy.setSourceModel(model)
+        tableView.setModel(proxy)
+        tableView.setSortingEnabled(True)
+        #print proxy.columnCount(), model.columnCount()
+        tableView.update()
+        return
+     
+    def save_pir_table_to_file(self):
+         self.save_table_to_file("PIR")
+         
+    def save_iskin_table_to_file(self):
+        self.save_table_to_file("Iskin")
+        
+    def save_pskin_table_to_file(self):
+        self.save_table_to_file("Pskin")
+     
+    def save_table_to_file(self, variable):
+        the_list = []
+        #extract list from listView2 to plot 
+        model = self.listView.model()
+        for index in range(model.rowCount()):
+            item = model.item(index)
+            if item.checkState():
+                the_list.append(item.text())
+        #to avoid problems with interacting of pandas and qtstring
+        the_list = map(str, the_list)
+        filename,the_filter =QtGui.QFileDialog.getSaveFileNameAndFilter(None, "Save as", ".","*.csv" )
+        if variable=="PIR": self.pir_calc.prod_inj_ratio_table[the_list].to_csv(filename, sep="\t", date_format="%d.%m.%Y")
+        if variable=="Pskin": self.pir_calc.block_prod_skin_table[the_list].to_csv(filename, sep="\t", date_format="%d.%m.%Y")
+        if variable=="Iskin": self.pir_calc.block_inj_skin_table[the_list].to_csv(filename, sep="\t", date_format="%d.%m.%Y")
+        
+    def save_plots_to_file(self):
+        destination_path, iskin_plt, pskin_plt, pi_ratio_plot, min_limit, max_limit, result = Ui_PlotsSaveDialog.getValues()
+        if result==False: return
+        i_skin_plot_flag = iskin_plt
+        p_skin_plot_flag = pskin_plt
+        pir_plot_flag = pi_ratio_plot
+        the_list = []
+        #extract list from listView2 to plot 
+        model = self.listView_2.model()
+        for index in range(model.rowCount()):
+            item = model.item(index)
+            if item.checkState():
+                the_list.append(item.text())
+        #to avoid problems with interacting of pandas and qtstring
+        the_list = map(str, the_list)
+        #to calc layot of subplots
+        #plots_number = float(len(the_list))        
+        plt.ioff()
+        try:
+            min_limit=int(min_limit)
+        except ValueError:
+            min_limit=None
+        try:
+            max_limit=int(max_limit)
+        except ValueError:
+            max_limit=None
+        for block in the_list:
+            #plotting each block on separate subplot
+            fig = plt.figure(figsize=(10, 6), dpi=80)
+            axes = fig.gca()
+            df_iskin = self.pir_calc.block_inj_skin_table[block]
+            df_pskin = self.pir_calc.block_prod_skin_table[block]
+            df_pir = self.pir_calc.prod_inj_ratio_table[block]
+            df_iskin.name = "skin(i)"
+            df_pskin.name = "skin(p)"
+            df_pir.name = "P/I"
+            #sub_axes = self.matplotlibwidget.figure.add_subplot(v,h,i, sharey=first_axes, sharex=first_axes)
+            if i_skin_plot_flag: pd.DataFrame(df_iskin).plot(ax=axes, color="blue", ylim=(min_limit, max_limit))
+            if p_skin_plot_flag: pd.DataFrame(df_pskin).plot(ax=axes, color="green", ylim=(min_limit, max_limit))
+            if pir_plot_flag: pd.DataFrame(df_pir).plot(ax=axes, color="red", ylim=(min_limit, max_limit))
+            filename = destination_path+"/"+block+".png"
+            fig.suptitle(block,  fontsize=14, fontweight='bold')
+            fig.savefig(filename,dpi=200, transparent=False)
+    
     def clear_plot(self):
         self.object.statusBar().showMessage('Plots area cleared')
         self.matplotlibwidget.figure.clear()
@@ -166,9 +321,9 @@ class UserInterface(Ui_MainWindow):
             df_pskin.name = block+" skin(p)"
             df_pir.name = block+" P/I"
             sub_axes = self.matplotlibwidget.figure.add_subplot(v,h,i, sharey=first_axes, sharex=first_axes)
-            if i_skin_plot_flag: pd.DataFrame(df_iskin).plot(ax=sub_axes)
-            if p_skin_plot_flag: pd.DataFrame(df_pskin).plot(ax=sub_axes)
-            if pir_plot_flag: pd.DataFrame(df_pir).plot(ax=sub_axes)
+            if i_skin_plot_flag: pd.DataFrame(df_iskin).plot(ax=sub_axes,color="blue")
+            if p_skin_plot_flag: pd.DataFrame(df_pskin).plot(ax=sub_axes,color="green")
+            if pir_plot_flag: pd.DataFrame(df_pir).plot(ax=sub_axes,color="red")
             i = i + 1
         self.matplotlibwidget.figure.tight_layout(pad=0.08, h_pad=0.2, w_pad=0.2)
         self.matplotlibwidget.draw()
@@ -206,7 +361,10 @@ class UserInterface(Ui_MainWindow):
         #self.pir_calc.pi_ratio_calc(self.blocks_list_for_analysis)
         self.object.statusBar().showMessage('blocks list loaded')
         self.add_plot_list()
+        self.load_tables()
         self.object.statusBar().showMessage('blocks list loaded.')
+        self.tabWidget.setCurrentIndex(2)
+        self.tabWidget.update()
              
     def clear(self):
         #TODO: clear all tabs
@@ -222,12 +380,13 @@ class UserInterface(Ui_MainWindow):
         self.object.statusBar().showMessage('data loading, it takes minute')
         #QtGui.QMessageBox.about(None, "Message", "start")
         #self.statusBar.showMessage('start to data load')
+        
         if (not QtCore.QFile.exists(self.Ndp_file_edit.text())) | \
             (not QtCore.QFile.exists(self.ofm_file_edit.text())) | \
             (not QtCore.QFile.exists(self.rgti_file_edit.text())) | \
             (not QtCore.QFile.exists(self.blocks_file_edit.text())) | \
             (not QtCore.QFile.exists(self.cells_file_edit.text())) :
-            #QtGui.QMessageBox.about(None, "Message", "Data not loaded\n one of input files doesn't exists")
+            QtGui.QMessageBox.about(None, "Message", "Data not loaded\n one of input files doesn't exists")
             self.object.statusBar().showMessage('Data not loaded one of input files doesn\'t exists')
             return
         
@@ -238,8 +397,12 @@ class UserInterface(Ui_MainWindow):
         self.pir_calc.CellMappingFile = str(self.cells_file_edit.text())
         self.pir_calc.load_data()
         self.create_check_boxes()           
+        self.object.statusBar().showMessage('Calculating.')
         self.pir_calc.pi_ratio_calc()
         self.object.statusBar().showMessage('Data loaded.')
+        self.object.statusBar().showMessage('Data loaded.')
+        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.update()
      
     def big_blocks_display(self, state=QtCore.Qt.Checked):
         self.create_check_boxes(state)
@@ -301,6 +464,8 @@ class UserInterface(Ui_MainWindow):
         
 if __name__=="__main__":
     app = QtGui.QApplication(sys.argv)
+    QtGui.QApplication.setStyle(QtGui.QStyleFactory.create("Plastique")) # setting the style
+    
     form = QtGui.QMainWindow()
     mwin = UserInterface()
     mwin.setupUi2(form)
