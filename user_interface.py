@@ -375,6 +375,13 @@ class UserInterface(Ui_MainWindow):
         self.listView_2.setModel(QtGui.QStandardItemModel())
         #gc.collect()
         self.object.statusBar().showMessage('Data cleared')
+        emptymodel = QtGui.QStandardItemModel()
+        self.tableView_inj_skin.setModel(emptymodel)
+        self.tableView_pi_ratio.setModel(emptymodel)
+        self.tableView_prod_skin.setModel(emptymodel)
+        self.tableView_inj_skin.update()
+        self.tableView_pi_ratio.update()
+        self.tableView_prod_skin.update()
     
     def load_input_files(self):
         self.object.statusBar().showMessage('data loading, it takes minute')
