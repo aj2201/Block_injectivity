@@ -3,6 +3,7 @@
 Created on Fri Nov 06 17:18:52 2015
 
 @author: Aygul.Ibatullina
+@email: Aygul.Ibatullina@salympetroleum.ru
 !For exe compiling pyinsatller is used (version 3.1.dev0)
 
 """
@@ -80,6 +81,14 @@ class NumberSortModel(QtGui.QSortFilterProxyModel):
 
      
 class UserInterface(Ui_MainWindow):
+    
+    __author__ = "Aygul.Ibatullina"
+    __email__  = "Aygul.Ibatullina@salympetroleum.ru"
+    __status__ = "Development"
+    __version__ = "1"
+    __copyright__ = "Salym Petroleum"
+    
+    
     def __init__(self):
         self.pir_calc = ProdInjRatioCalc()
         #self.main = Ui_MainWindow()
@@ -146,18 +155,24 @@ class UserInterface(Ui_MainWindow):
         QtCore.QObject.connect(self.blocks_file_button, QtCore.SIGNAL(_fromUtf8("clicked()")), self.blocks_file_dialog)        
         
     def add_to_plotting_list(self):
+        """
+        after "add" clinckied add selected wells from listview_all_blocks to listView_for_plotting
+        """
         model_to = self.listView_for_plotting.model()
         #model_from = self.listView_all_blocks.model()
         rows= self.listView_all_blocks.selectionModel().selectedRows()
         for row in rows:
             item = QtGui.QStandardItem(row.data())
-            if len(model_to.findItems(item.text())) ==0:
+            if len(model_to.findItems(item.text()))==0:
                 model_to.appendRow(item)
         model_to.sort()
         self.listView_for_plotting.update()
         return
         
     def remove_from_plotting_list(self):
+        """
+        after "delete" push remove selected wells from listView_for_plotting
+        """
         model = self.listView_for_plotting.model()
         indxs= self.listView_for_plotting.selectedIndexes()        
         rows = []
@@ -169,6 +184,9 @@ class UserInterface(Ui_MainWindow):
         self.listView_for_plotting.update()        
     
     def filter_all_blocks_list(self, filter_text=""):
+        """
+        filter wells by text written on lineEdit_filter
+        """
         if self.big_blocks_checkBox.isChecked()==True:
             list_for_display = list(set(self.pir_calc.blocks_list) - set(self.pir_calc.cells_list))
         else:
@@ -180,6 +198,10 @@ class UserInterface(Ui_MainWindow):
         
         
     def load_tables(self):
+        """
+        load tables of wells on listView_for_plotting 
+        to tables on tables tab
+        """
         the_list = []
         #extract list from listView2 to plot 
         model = self.listView_for_plotting.model()
@@ -197,39 +219,35 @@ class UserInterface(Ui_MainWindow):
         
         
     def table_load(self, the_list, source_table, tableView):
-        #import pdb; pdb.set_trace()
         df = source_table[the_list].T.copy()
         #df.values = map(np.round,df.values, 3)
         df.columns = map(lambda x: x.strftime('%d-%m-%Y'), df.columns)
         df.reset_index(level=0, inplace=True)        
         model = PandasModel(df)
-        #import pdb; pdb.set_trace()
         proxy = QtGui.QSortFilterProxyModel() #NumberSortModel()
         proxy.setSourceModel(model)
         tableView.setModel(proxy)
         tableView.setSortingEnabled(True)
-        #print proxy.columnCount(), model.columnCount()
         tableView.update()
         return
      
+    # tables save to file buttons event handlres
     def save_pir_table_to_file(self):
-         self.save_table_to_file("PIR")
-         
+         self.save_table_to_file("PIR")      
     def save_iskin_table_to_file(self):
-        self.save_table_to_file("Iskin")
-        
+        self.save_table_to_file("Iskin")        
     def save_pskin_table_to_file(self):
         self.save_table_to_file("Pskin")
      
     def save_table_to_file(self, variable):
         the_list = []
-        #extract list from listView2 to plot 
+        # extract list from listView2 to plot 
         model = self.listView_for_plotting.model()
         for index in range(model.rowCount()):
             item = model.item(index)
             #if item.checkState():
             the_list.append(item.text())
-        #to avoid problems with interacting of pandas and qtstring
+        # to avoid problems with interacting of pandas and qtstring
         the_list = map(str, the_list)
         filename,the_filter =QtGui.QFileDialog.getSaveFileNameAndFilter(None, "Save as", ".","*.csv" )
         if variable=="PIR": self.pir_calc.prod_inj_ratio_table[the_list].to_csv(filename, sep="\t", date_format="%d.%m.%Y")
@@ -237,22 +255,26 @@ class UserInterface(Ui_MainWindow):
         if variable=="Iskin": self.pir_calc.block_inj_skin_table[the_list].to_csv(filename, sep="\t", date_format="%d.%m.%Y")
         
     def save_plots_to_file(self):
-        destination_path, iskin_plt, pskin_plt, pi_ratio_plot, min_limit, max_limit, result = Ui_PlotsSaveDialog.getValues()
+        """
+        save all plots handler
+        show dialog and then save plot of each well into file "destination/well*.png"
+        
+        """
+		# show dialog to request plotting options
+        destination_path, i_skin_plot_flag, p_skin_plot_flag, pir_plot_flag, min_limit, max_limit, result = Ui_PlotsSaveDialog.getValues()
+		# if dialog "ok" not pressed then do nothing
         if result==False: return
-        i_skin_plot_flag = iskin_plt
-        p_skin_plot_flag = pskin_plt
-        pir_plot_flag = pi_ratio_plot
         the_list = []
-        #extract list from listView2 to plot 
+        # extract list from listView2 to plot 
         model = self.listView_2.model()
         for index in range(model.rowCount()):
             item = model.item(index)
             if item.checkState():
                 the_list.append(item.text())
-        #to avoid problems with interacting of pandas and qtstring
+        # to avoid problems with interacting of pandas and qtstring
         the_list = map(str, the_list)
-        #to calc layot of subplots
-        #plots_number = float(len(the_list))        
+        # to calc layot of subplots
+        # plots_number = float(len(the_list))        
         plt.ioff()
         try:
             min_limit=int(min_limit)
@@ -290,6 +312,10 @@ class UserInterface(Ui_MainWindow):
         
         
     def plot(self):
+        """
+        --to destroy
+        old plot function which plotting only one curve in each subplot
+        """
         self.matplotlibwidget.axes.clear()
         the_list = []
         #extract list to plot from form
@@ -326,6 +352,9 @@ class UserInterface(Ui_MainWindow):
         
         
     def plot_new(self):
+        """
+        plot subplot for each well 
+        """
         self.clear_plot()
         i_skin_plot_flag = (self.checkBox_inj_skin_plot.checkState() ==QtCore.Qt.Checked)
         p_skin_plot_flag = (self.checkBox_prod_skin_plot.checkState() ==QtCore.Qt.Checked)
@@ -365,7 +394,9 @@ class UserInterface(Ui_MainWindow):
         self.matplotlibwidget.draw()
         
     def add_plot_list(self):
-        """create dynamycally list of checkboxes from blocks_list_for_analysis"""
+        """
+        create  list of checkboxes from blocks_list_for_analysis
+        """
         model = QtGui.QStandardItemModel()
         check = QtCore.Qt.Unchecked
         for n in self.blocks_list_for_analysis :                   
@@ -377,7 +408,7 @@ class UserInterface(Ui_MainWindow):
         #self.tabWidget.currentChanged(2)
         
     def plot_select_all_function(self, state=QtCore.Qt.Checked):
-        """Select All layers loaded inside the listView"""
+        """Select All for listView_2"""
         model = self.listView_2.model()
         for index in range(model.rowCount()):
             item = model.item(index)
@@ -385,17 +416,19 @@ class UserInterface(Ui_MainWindow):
                 item.setCheckState(state)
     
     def load_blocks_list(self):
+        """
+        load blocks list push button clicked handler
+        loaded list from listView_for_plotting to listView2
+        then added this wells to tables
+        """
         self.object.statusBar().showMessage('blocks list loading')
         self.listView_2.setModel(QtGui.QStandardItemModel())
         the_list = []
         model = self.listView_for_plotting.model()
         for index in range(model.rowCount()):
             item = model.item(index)
-            #if item.checkState():
             the_list.append(item.text())
         self.blocks_list_for_analysis = map(str,the_list)
-        #self.pir_calc.pi_ratio_calc(self.blocks_list_for_analysis)
-        self.object.statusBar().showMessage('blocks list loaded')
         self.add_plot_list()
         self.load_tables()
         self.object.statusBar().showMessage('blocks list loaded.')
@@ -410,7 +443,6 @@ class UserInterface(Ui_MainWindow):
         self.listView_for_plotting.setModel(QtGui.QStandardItemModel())
         self.clear_plot()
         self.listView_2.setModel(QtGui.QStandardItemModel())
-        #gc.collect()
         self.object.statusBar().showMessage('Data cleared')
         emptymodel = QtGui.QStandardItemModel()
         self.tableView_inj_skin.setModel(emptymodel)
@@ -422,10 +454,12 @@ class UserInterface(Ui_MainWindow):
         
     
     def load_input_files(self):
+        """
+        read file names
+        load data for calculation block and implement 
+        calculating
+        """
         self.object.statusBar().showMessage('data loading, it takes minute')
-        #QtGui.QMessageBox.about(None, "Message", "start")
-        #self.statusBar.showMessage('start to data load')
-        
         if (not QtCore.QFile.exists(self.Ndp_file_edit.text())) | \
             (not QtCore.QFile.exists(self.ofm_file_edit.text())) | \
             (not QtCore.QFile.exists(self.rgti_file_edit.text())) | \
@@ -446,17 +480,19 @@ class UserInterface(Ui_MainWindow):
         self.object.statusBar().showMessage('Calculating.')
         self.pir_calc.pi_ratio_calc()
         self.object.statusBar().showMessage('Data loaded.')
-        self.object.statusBar().showMessage('Data loaded.')
         self.tabWidget.setCurrentIndex(1)
         self.tabWidget.update()
      
     def big_blocks_display(self, state=QtCore.Qt.Checked):
+        """
+        display/not display cells
+        """
         self.create_all_blocks_list(state)
         
     def create_all_blocks_list(self, state=QtCore.Qt.Checked):
-        """create dynamycally list of checkboxes from blocks_list"""
-        #import pdb; pdb.set_trace()
-        #check = QtCore.Qt.Unchecked
+        """
+        update listView_all_blocks 
+        """
         if state==QtCore.Qt.Checked:
             list_for_display = list(set(self.pir_calc.blocks_list) - set(self.pir_calc.cells_list))
         else:
@@ -466,6 +502,9 @@ class UserInterface(Ui_MainWindow):
         
         
     def update_all_blocks_list(self, list_for_display=None):
+        """
+        set list_for_display for listView_all_blocks 
+        """
         model = QtGui.QStandardItemModel()
         if list_for_display==None:
             self.create_all_blocks_list()
