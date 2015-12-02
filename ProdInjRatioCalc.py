@@ -10,12 +10,21 @@ import BlockInjIndex
 import PVTprops as pvt
 
 class ProdInjRatioCalc(BlockInjIndex.BlockInjIndex):
-    def __init__(self, NinetyDaysPresInputFileStr=".\input\\NinetyDaysPresInputFile.txt", \
-    InjOfmFileStr=".\input\\InjOfmFile.txt", BlockMappingFileInput='.\input\\blocks_mapping.csv',\
-    CellsMappingFileInput = '.\input\\cells_mapping.csv'):
+    
+    def __init__(self,\
+                NinetyDaysPresInputFileStr=".\input\\NinetyDaysPresInputFile.txt", \
+                InjOfmFileStr=".\input\\InjOfmFile.txt",\
+                BlockMappingFileInput='.\input\\blocks_mapping.csv',\
+                CellsMappingFileInput = '.\input\\cells_mapping.csv'):
+        """
+        init as init of parrent class BlockInjIndex
+        """
         BlockInjIndex.BlockInjIndex.__init__(self, NinetyDaysPresInputFileStr, InjOfmFileStr, BlockMappingFileInput,CellsMappingFileInput )
         
     def prod_skin_calc(self):
+        """
+        calculation of skin of producers
+        """
         table = self.pi_table.T.copy()
     #TODO: change input data from actual to potential   
         alpha_table = self.kh_table * pvt.PVTprops.kro_prime / pvt.PVTprops.mu_o / pvt.PVTprops.C
@@ -31,6 +40,9 @@ class ProdInjRatioCalc(BlockInjIndex.BlockInjIndex):
         self.prod_skin_table.index = self.prod_skin_table.index.droplevel()
     
     def block_prod_skin_calc(self, blocks_list_for_calc=None):
+        """
+        calculation of block skin as weighted average of producers skin 
+        """
         self.prod_skin_calc()
         if blocks_list_for_calc==None:
             blocks_list_for_calc = self.blocks_list
@@ -48,6 +60,9 @@ class ProdInjRatioCalc(BlockInjIndex.BlockInjIndex):
         self.block_prod_skin_table.index = self.block_prod_skin_table.index.droplevel()
         
     def pi_ratio_calc(self, blocks_list_for_calc=None):
+        """
+        calculation of pseudo prodcutivivty injectivity ratio for block
+        """
         #self.pi_ratio_table = pd.DataFrame()
         self.block_inj_skin_calc(blocks_list_for_calc)
         self.block_prod_skin_calc(blocks_list_for_calc)
@@ -65,8 +80,7 @@ if __name__=="__main__":
     """    NinetyDaysPresInputFileStr=".\input\\NinetyDaysPresInputFile.txt", \
     InjOfmFileStr=".\input\\InjOfmFile.txt", BlockMappingFileInput='.\input\\blocks_mapping.csv',\
     CellsMappingFileInput = '.\input\\cells_mapping.csv')"""
-    import pdb;pdb.set_trace()
-    t = ProdInjRatioCalc(NinetyDaysPresInputFileStr="./FullInput/NinetyDaysPresInputFile.txt", InjOfmFileStr ="./FullInput/InjOfmFile.txt" )
+    t = ProdInjRatioCalc(NinetyDaysPresInputFileStr="./FullInput/90dp_full.txt", InjOfmFileStr ="./FullInput/injOfm_full.txt" )
     t.load_data()
     t.pi_ratio_calc()
     SVA_blocks = filter(lambda t: t[:2]=="SV",t.block_inj_skin_table.columns)
