@@ -9,12 +9,30 @@ import seaborn
 class BlockInjIndex:
     """
     block injectivity index calculating class
-    Atributes:
+    Inputs:
+     From OFM:
         pres_table - reservoir pressure estimates pres_table[well][date*]
         bhp_table -BHPs of injectors
-        inj_table - injection rates [well][date*]
+        inj_table - injection rates [well][date*]   
+        pi_table 
+        Qliq_table 
+    From RGTI:
         kh_table - perforated kh for each well
-                
+    From wells/blocks/cells mapping files
+        WAF_table_blocks 
+        koeff_for_cells 
+        blocks_dict 
+        cells_dict  
+        blocks_list 
+        cells_list 
+        
+    As output:
+        self.inj_index - skins of injectors
+        block_inj_skin_table - skins of blocks
+        
+    Main funtions:
+        load_data - load data from initialaised input files
+        self.block_inj_skin_calc - calculating skins of blocks
         
     """
 
@@ -25,9 +43,11 @@ class BlockInjIndex:
     __copyright__ = "Salym Petroleum"
 
     
-    def __init__(self, NinetyDaysPresInputFileStr=".\input\\NinetyDaysPresInputFile.txt", \
-    InjOfmFileStr=".\input\\InjOfmFile.txt", BlockMappingFileInput='.\input\\blocks_mapping.csv',\
-    CellsMappingFileInput = '.\input\\cells_mapping.csv'):
+    def __init__(self, \
+                NinetyDaysPresInputFileStr=".\input\\NinetyDaysPresInputFile.txt", \
+                InjOfmFileStr=".\input\\InjOfmFile.txt",\
+                BlockMappingFileInput='.\input\\blocks_mapping.csv',\
+                CellsMappingFileInput = '.\input\\cells_mapping.csv'):
         """
         class initialization
         args is names of input files 
@@ -58,7 +78,7 @@ class BlockInjIndex:
         self.cells_list = []
         #self.blocks_list_for_calc = []
         
-    def load_inj_rates_PT(self):  #ToDo: use pivot table!
+    def __load_inj_rates_PT(self):  #ToDo: use pivot table!
         """
         loading inj rates and bhp from txt file (ofm report):
             @name(), Date, MonthlyWaterInj.VolumeTot, MonthlyWaterInj.Days, avg_BhpInjTopPerfFaily
@@ -77,7 +97,7 @@ class BlockInjIndex:
             self.bhp_table = pd.pivot_table(df, values=["avg_BhpInjTopPerfFaily"], columns=["Date"], index=["@name()"]).T
             
                     
-    def load_90dp_PT(self):
+    def __load_90dp_PT(self):
         """
         loading reservoir pressures from txt file (ofm report):
         # @name(), Date,  Ninetydaysplan.Pres, Ninetydaysplan.Pi, Ninetydaysplan.Qgross 
@@ -93,7 +113,7 @@ class BlockInjIndex:
         self.pi_table = (pd.pivot_table(df, values=["Pi"], columns=["Date"], index=["@name()"])).T
         self.Qliq_table = (pd.pivot_table(df, values=["Qliq"], columns=["Date"], index=["@name()"])).T
                        
-    def load_kh(self):
+    def __load_kh(self):
         """
         loading petrophisical data
         Data file header is(Mayak RGTI):
@@ -109,7 +129,7 @@ class BlockInjIndex:
         df['kh'] = df['Perforation']*df['Brine Permeability']*df['Sublayer Height TVD']  # add a column with perforated kh of  interval
         self.kh_table = pd.pivot_table(df, values=['kh'], index=['Well Name'], aggfunc=np.sum)
         
-    def blocks_mapping(self, block_name = None):
+    def __blocks_mapping(self, block_name = None):
         """
         loading blocks mapping
         Cell     Well       WAF, and additionally block column
@@ -142,7 +162,7 @@ class BlockInjIndex:
 #        self.blocks_list.append("SVA")
         self.blocks_list.sort()    
     
-    def cells_mapping(self):
+    def __cells_mapping(self):
         """
         loading cells mapping
         :Injector;Koeff;Producer
@@ -154,7 +174,7 @@ class BlockInjIndex:
         self.koeff_for_cells = pd.pivot_table(df, values=["Koeff"], index=["Injector", "Producer"])
         
 
-    def nominal_prod_inj_ratio_calc(self):
+    def __nominal_prod_inj_ratio_calc(self):
         """
         nominal p/i ratio 
         is ratio of producers count to injectors count
@@ -168,27 +188,18 @@ class BlockInjIndex:
         e["P/I"] = e["producers"]/e["injectors"]
         self.prod_inj_ratio_nominal = e["P/I"]
 
-    
-    def calc_pattern_pres(self):
-        """
-        for injectors (which are in cells_list)
-        pres = mean of neighboring prodcuers 
-        """
-        
-    
     def load_data(self):
         """
         loading input data
         """
-        #import pdb; pdb.set_trace()
-        self.load_inj_rates_PT()
-        self.load_90dp_PT()
-        self.load_kh()
-        self.cells_mapping()
-        self.blocks_mapping()        
-        self.nominal_prod_inj_ratio_calc()
+        self.__load_inj_rates_PT()
+        self.__load_90dp_PT()
+        self.__load_kh()
+        self.__cells_mapping()
+        self.__blocks_mapping()        
+        self.__nominal_prod_inj_ratio_calc()
     
-    def injectivity_skin_calc(self):
+    def __injectivity_skin_calc(self):
         """
         calculating injectors skin (from steady state flow eq for single well)
         """
@@ -231,9 +242,9 @@ class BlockInjIndex:
     def block_inj_skin_calc(self, blocks_list_for_calc=None):
         """
         calcualting block injectivity skin
-        as rate - weughted average of injectors skin
+        as rate-weighted average of injectors skin
         """
-        self.injectivity_skin_calc()
+        self.__injectivity_skin_calc()
         blocks_inj_dict = {a: list(set(self.blocks_dict[a]) & set(self.cells_list) & set(self.inj_table.T.index)) for a in self.blocks_list}
         # eqclude cells from blocks list 
         if blocks_list_for_calc==None:
@@ -242,27 +253,20 @@ class BlockInjIndex:
         blocks_list_for_calc.sort()
         for block in blocks_list_for_calc:
             if len(blocks_inj_dict[block]) > 0:
-                #TODO: weight average
-                #block_injectors_skins = pd.DataFrame([self.inj_index.T[injector] for injector in blocks_inj_dict[block]])
                 injectors = blocks_inj_dict[block]
-                #block_inj_rates = self.inj_table[injectors]
                 liq_rates = self.inj_table[injectors]
                 wafs = self.WAF_table_blocks["WAF"][block][injectors]
                 wafed_liqs = liq_rates * wafs
-            
                 block_inj_skins = self.inj_index.T[injectors]
-                #assumed that there arent injectors with WAF<1
-                self.block_inj_skin_table[block] = (block_inj_skins*wafed_liqs).T.sum() / wafed_liqs.T.sum() #block_inj_rates
+                self.block_inj_skin_table[block] = (block_inj_skins*wafed_liqs).T.sum() / wafed_liqs.T.sum()
             else: 
-                #if __debug__: print block, "is empty [injectors didn't found]"
                 self.block_inj_skin_table[block] =  np.nan
-        #self.block_inj_skin_table[self.block_inj_skin_table>1000]=np.nan
+        self.block_inj_skin_table[self.block_inj_skin_table>1000]=np.nan
         self.block_inj_skin_table.sort_index
         self.block_inj_skin_table.index = self.block_inj_skin_table.index.droplevel()
         #the results of calc is self.block_inj_skin_table
     
-    def plot_list(self, blocks_list):
-        #df = pd.DataFrame({a: self.block_inj_skin_table[a] for a in blocks_list })
+    def plot_list(self, blocks_list=[]):
         if len(blocks_list)>0:
             df = self.block_inj_skin_table[blocks_list]
         else: 
@@ -278,14 +282,9 @@ class BlockInjIndex:
     def plot_block(self, block_name):
         df = pd.DataFrame(self.block_inj_skin_table[block_name])
         df = df[np.isnan(df)==False]
-        df.plot()
-    
-    def save_as_csv(self, file_name="out.csv"):
-        self.block_inj_skin_table.T.to_csv(file_name,sep=';')      
+        df.plot()  
 
 if __name__ == "__main__":
-    #if __debug__:
-    #    print "Debug"
     t = BlockInjIndex(NinetyDaysPresInputFileStr="./FullInput/90dpfrom2011.txt", InjOfmFileStr ="./FullInput/injOfmfrom2011.txt" )
     t.load_data()
     t.block_inj_skin_calc()
