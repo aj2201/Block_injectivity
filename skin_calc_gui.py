@@ -124,6 +124,9 @@ class UserInterface(Ui_MainWindow):
         #self.tableView_snapshot = DataFrameWidget()
         
     def setup_connections(self):
+        QtCore.QObject.connect(self.pushButton_add_to_list, QtCore.SIGNAL(_fromUtf8("clicked()")), self.add_to_plotting_list)
+        QtCore.QObject.connect(self.pushButton_remove_from_list, QtCore.SIGNAL(_fromUtf8("clicked()")), self.remove_from_plotting_list)
+        QtCore.QObject.connect(self.lineEdit_filter, QtCore.SIGNAL(_fromUtf8("textChanged(QString)")), self.filter_all_blocks_list)
         QtCore.QObject.connect(self.load_input_files_button, QtCore.SIGNAL(_fromUtf8("clicked()")), self.load_input_files)
         QtCore.QObject.connect(self.load_blocks_button, QtCore.SIGNAL(_fromUtf8("clicked()")), self.load_blocks_list)
         QtCore.QObject.connect(self.actionClear_Data, QtCore.SIGNAL(_fromUtf8("activated()")), self.clear)
@@ -137,10 +140,6 @@ class UserInterface(Ui_MainWindow):
         QtCore.QObject.connect(self.pushButton_save_pir_table_to_file, QtCore.SIGNAL(_fromUtf8("clicked()")), self.save_pir_table_to_file)
         QtCore.QObject.connect(self.pushButton_save_iskin_table_to_file, QtCore.SIGNAL(_fromUtf8("clicked()")), self.save_iskin_table_to_file)
         QtCore.QObject.connect(self.pushButton_save_pskin_table_to_file, QtCore.SIGNAL(_fromUtf8("clicked()")), self.save_pskin_table_to_file)
-        
-        QtCore.QObject.connect(self.pushButton_add_to_list, QtCore.SIGNAL(_fromUtf8("clicked()")), self.add_to_plotting_list)
-        QtCore.QObject.connect(self.pushButton_remove_from_list, QtCore.SIGNAL(_fromUtf8("clicked()")), self.remove_from_plotting_list)
-        QtCore.QObject.connect(self.lineEdit_filter, QtCore.SIGNAL(_fromUtf8("textChanged(QString)")), self.filter_all_blocks_list)
     
     def setup_file_open_dialogs(self):
         self.Ndp_file_edit.setText(self.pir_calc.NinetyInputFile)
@@ -158,14 +157,18 @@ class UserInterface(Ui_MainWindow):
         """
         after "add" clinckied add selected wells from listview_all_blocks to listView_for_plotting
         """
+        
         model_to = self.listView_for_plotting.model()
         #model_from = self.listView_all_blocks.model()
         rows= self.listView_all_blocks.selectionModel().selectedRows()
         for row in rows:
-            item = QtGui.QStandardItem(row.data())
+            try:
+                item = QtGui.QStandardItem(row.data().toString())
+            except AttributeError:
+                item = QtGui.QStandardItem(str(row.data()))
             if len(model_to.findItems(item.text()))==0:
                 model_to.appendRow(item)
-        model_to.sort()
+        model_to.sort(0)
         self.listView_for_plotting.update()
         return
         
@@ -187,6 +190,7 @@ class UserInterface(Ui_MainWindow):
         """
         filter wells by text written on lineEdit_filter
         """
+        filter_text = str(filter_text)
         if self.big_blocks_checkBox.isChecked()==True:
             list_for_display = list(set(self.pir_calc.blocks_list) - set(self.pir_calc.cells_list))
         else:
