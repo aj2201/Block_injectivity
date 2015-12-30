@@ -78,6 +78,16 @@ class BlockInjIndex:
         self.cells_list = []
         #self.blocks_list_for_calc = []
         
+    def inj_rate_filtr(self, x):
+        if x > 10:
+            return x
+        else: return np.nan
+        
+    def inj_bhp_filtr(self, x):
+        if x > 320:
+            return x
+        else: return np.nan            
+        
     def __load_inj_rates_PT(self):  #ToDo: use pivot table!
         """
         loading inj rates and bhp from txt file (ofm report):
@@ -86,7 +96,9 @@ class BlockInjIndex:
         df = pd.read_table(self.InjOfmFile, ",")
         df.columns = map(lambda x: x.replace(" ", ""), df.columns)
         df['Date'] = pd.to_datetime(df['Date'])
+        df["avg_BhpInjTopPerfFaily"] = map(self.inj_bhp_filtr, df["avg_BhpInjTopPerfFaily"] )      
         df["InjRate"] = df["MonthlyWaterInj.VolumeTot"] / df["MonthlyWaterInj.Days"] 
+        df["InjRate"] = map(self.inj_rate_filtr, df["InjRate"])
         #df["Date"] = self.year_month(df["Date"]) #to avoid porblems with days (last vs first)
         #self.bhp_table = pd.pivot_table(df, values=["avg_BhpInjTopPerfFaily"], rows = ["Date"], cols = ["@name()"])        
         if str(pd.__version__) == '0.6.1':
