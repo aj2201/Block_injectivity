@@ -25,7 +25,7 @@ class ProdInjRatioCalc(BlockInjIndex.BlockInjIndex):
         """
         calculation of skin of producers
         """
-        table = self.pi_table.T.copy()
+        table = 1/self.pi_table.T.copy() #corrected 6/15/2017 Aygul
     #TODO: change input data from actual to potential   
         alpha_table = self.kh_table * pvt.PVTprops.kro_prime / pvt.PVTprops.mu_o / pvt.PVTprops.C
         alpha_table.columns=['alpha']
@@ -87,3 +87,4 @@ if __name__=="__main__":
     WS_blocks = filter(lambda t: t[:2]=="WS", t.block_inj_skin_table.columns)
     US_blocks = filter(lambda t: t[:2]=="US", t.block_inj_skin_table.columns)
     t.plot_list(["SVA-5"])
+    
