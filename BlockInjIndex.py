@@ -84,7 +84,7 @@ class BlockInjIndex:
         else: return np.nan
         
     def inj_bhp_filtr(self, x):
-        if x > 320:
+        if x > 120:
             return x
         else: return np.nan            
         
@@ -151,7 +151,7 @@ class BlockInjIndex:
          #making new column with block name
         input_table["block"] = map(lambda s: s[:s.find('-', 4)], input_table["Cell"])                
         wells = list(set(input_table["Well"].values))
-        wells = map(str, wells[1:])
+        wells = map(str, wells[0:])  #corrected 6/15/2017
         df = pd.DataFrame()
         df["Well"] = wells
         df ["WAF"] = 1
