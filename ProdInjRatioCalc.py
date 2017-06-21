@@ -80,11 +80,11 @@ if __name__=="__main__":
     """    NinetyDaysPresInputFileStr=".\input\\NinetyDaysPresInputFile.txt", \
     InjOfmFileStr=".\input\\InjOfmFile.txt", BlockMappingFileInput='.\input\\blocks_mapping.csv',\
     CellsMappingFileInput = '.\input\\cells_mapping.csv')"""
-    t = ProdInjRatioCalc(NinetyDaysPresInputFileStr="./FullInput/90dp_full.txt", InjOfmFileStr ="./FullInput/injOfm_full.txt" )
+    t = ProdInjRatioCalc()
     t.load_data()
     t.pi_ratio_calc()
     SVA_blocks = filter(lambda t: t[:2]=="SV",t.block_inj_skin_table.columns)
     WS_blocks = filter(lambda t: t[:2]=="WS", t.block_inj_skin_table.columns)
     US_blocks = filter(lambda t: t[:2]=="US", t.block_inj_skin_table.columns)
-    t.plot_list(["SVA-5"])
+    #t.plot_list(["SVA-5"])
     
