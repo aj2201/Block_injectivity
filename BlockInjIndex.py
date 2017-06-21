@@ -108,6 +108,7 @@ class BlockInjIndex:
             self.inj_table = pd.pivot_table(df, values=["InjRate"], columns=["Date"], index=["@name()"]).T
             self.bhp_table = pd.pivot_table(df, values=["avg_BhpInjTopPerfFaily"], columns=["Date"], index=["@name()"]).T
             
+        self.injectors = list(self.inj_table.columns)
                     
     def __load_90dp_PT(self):
         """
@@ -124,6 +125,7 @@ class BlockInjIndex:
         self.pres_table = (pd.pivot_table(df, values=["Pres"], columns=["Date"], index=["@name()"])).T
         self.pi_table = (pd.pivot_table(df, values=["Pi"], columns=["Date"], index=["@name()"])).T
         self.Qliq_table = (pd.pivot_table(df, values=["Qliq"], columns=["Date"], index=["@name()"])).T
+        self.producers = list(self.Qliq_table.columns)
                        
     def __load_kh(self):
         """
@@ -150,21 +152,26 @@ class BlockInjIndex:
         input_table = pd.read_table(self.BlockMappingFile, ";")                                       
          #making new column with block name
         input_table["block"] = map(lambda s: s[:s.find('-', 4)], input_table["Cell"])                
-        wells = list(set(input_table["Well"].values))
-        wells = map(str, wells[0:])  #corrected 6/15/2017
-        df = pd.DataFrame()
-        df["Well"] = wells
-        df ["WAF"] = 1
-        df ["block"] = map(lambda s: s[:s.find('-')], df["Well"])
-        df["Cell"] = df ["block"] 
-        input_table = input_table.append(df)
+        # # wells = list(set(input_table["Well"].values))
+        # # wells = map(str, wells[0:])  #corrected 6/15/2017
+        # # df = pd.DataFrame()
+        # # df["Well"] = wells
+        # # df ["WAF"] = 1
+        # # df ["block"] = map(lambda s: s[:s.find('-')], df["Well"])
+        # # df["Cell"] = df ["block"] 
+        # # input_table = input_table.append(df)
         # creating pivot table to extract blocks with its wells, 
         #this table later could be used to estract WAFs       
         self.WAF_table_blocks = pd.pivot_table(input_table, values=['WAF'], aggfunc=np.max, index=['block', 'Well'])                                                                                             
-        self.blocks_list = list(set(input_table["block"]))
+        cells_WAFs = self.koeff_for_cells.copy()
+        cells_WAFs.columns = self.WAF_table_blocks.columns
+        cells_WAFs.index.names = self.WAF_table_blocks.index.names
+        self.WAF_table_blocks = self.WAF_table_blocks.append(cells_WAFs)
+        self.blocks_list = list(set(input_table["block"])) + self.cells_list
         # dictionary block name is key, and for each keycorresponds list of its wells
         self.blocks_dict = {a : list(set(input_table[input_table["block"]==a]["Well"])) for a in  self.blocks_list}                        
-        #adding fields as bocks
+        self.blocks_dict.update(self.cells_dict)
+        #adding fields as blocks
         #TODO: aweful method! shoul be changed
 #        self.blocks_dict["US"] = filter(lambda x: x[:2]=="US",  self.cells_list )
 #        self.blocks_dict["SVA"] = filter(lambda x: x[:2]=="SV",  self.cells_list )
@@ -182,7 +189,8 @@ class BlockInjIndex:
         df = pd.read_table(self.CellMappingFile, ";")
         self.cells_list = list(set(df["Injector"])) #list(pd.pivot_table(df, rows=["Injector"], values=["Koeff"]).axes[0])
         #self.WAF_table = pd.pivot_table(df, rows=["Injector", "Producer"], values=["Koeff"])
-        self.cells_dict = { a: list(set(df[df["Injector"]==a]["Producer"]) - set(self.cells_list)) for a in self.cells_list}
+        self.cells_dict_prod = { a: list(set(df[df["Injector"]==a]["Producer"]) & set(self.producers)) for a in self.cells_list}
+        self.cells_dict = { a: list(df[df["Injector"]==a]["Producer"]) for a in self.cells_list}        
         self.koeff_for_cells = pd.pivot_table(df, values=["Koeff"], index=["Injector", "Producer"])
         
 
@@ -193,7 +201,7 @@ class BlockInjIndex:
         """
         wafs = self.WAF_table_blocks.copy()
         wafs.reset_index(inplace=True)
-        wafs["isInj"] = [ a in set(self.cells_list) for a in wafs["Well"].values]
+        wafs["isInj"] = [ a in set(self.injectors) for a in wafs["Well"].values]
         wafs["injectors"] = wafs["WAF"]* (1 - wafs["isInj"])
         wafs["producers"] = wafs["WAF"]* wafs["isInj"]
         e = wafs.groupby("block").sum()
@@ -218,9 +226,12 @@ class BlockInjIndex:
         #self.load_data()
         #calculating injectors pressure as average of neighbor producers 90dp pressure
         inj_Pres_table = pd.DataFrame()
+        cells_Pres = pd.DataFrame()
+                
         #TODO: Pres as PI weighted average
-        for injector in self.cells_list:  #cell contain injector and surrounding producers
-           neighbors = self.cells_dict.get(injector)  # getting neighbors list
+        #calcualting avrage Pres for cells
+        for cell in self.cells_list:  #cell contain injector and surrounding producers
+           neighbors = self.cells_dict_prod.get(cell)  # getting neighbors list
            #neighbors = neighbors[neighbors!=injector]
            neighbors_Pres = pd.DataFrame() #[self.pres_table[i] for i in neighbors and ]) #getting pressures of neighbors
            some_list = []
@@ -228,16 +239,22 @@ class BlockInjIndex:
                if str(type(self.pres_table.get(i))) != "<type 'NoneType'>":
                    some_list.append( self.pres_table[i])
            neighbors_Pres = pd.DataFrame(some_list)
-           injector_Pres = neighbors_Pres.mean(skipna=True, axis=0)  # averaging of non NaN values, i hope that its like to numpy.nanmean (v1.11)
-           inj_Pres_table[injector] = injector_Pres  # pressure of injector calculated as average of neighbor producers 90dp pressure
-           
+           cells_Pres[cell] = neighbors_Pres.mean(skipna=True, axis=0)  # averaging of non NaN values, i hope that its like to numpy.nanmean (v1.11)
+                      
+        #obtainging injector Pres as cell Pres
+        inv_cells_dict = {}
+        for cell, wells in self.cells_dict.iteritems():
+            for well in set(wells)&set(self.injectors):
+                inv_cells_dict.update({well:cell}) #here potential bug! if injector signed for two or more cells only one will be accounted for Pres
+        self.injectors = list(set(self.injectors) & set(list(inv_cells_dict.keys())))        
+        inj_Pres_table = pd.DataFrame({injector: cells_Pres[inv_cells_dict[injector]] for injector in self.injectors})
+        
         # beta_coef calculating =  -(p_avg_D_pat-LN(2)) where p_avg_D_pat = LN(d/rw)-0.443 = 8.30
         beta_coef = -(pvt.PVTprops.p_avg_D_pat - np.log(2))
         #alpha for each well =  preforated kh*krw/mu_w/C
         alpha_table = self.kh_table * pvt.PVTprops.krw_prime / pvt.PVTprops.mu_w / pvt.PVTprops.C
         alpha_table.columns=['alpha']
         # zero values assign as NAN to avoid misstakes in averaging
-        #alpha_table[alpha_table['alpha']==0] = np.nan
         # table = (BHP - Pres) / InjRate
         table = (self.bhp_table.T['avg_BhpInjTopPerfFaily']-inj_Pres_table.T['Pres'] ) / self.inj_table.T['InjRate']
         
@@ -257,7 +274,7 @@ class BlockInjIndex:
         as rate-weighted average of injectors skin
         """
         self.__injectivity_skin_calc()
-        blocks_inj_dict = {a: list(set(self.blocks_dict[a]) & set(self.cells_list) & set(self.inj_table.T.index)) for a in self.blocks_list}
+        blocks_inj_dict = {a: list(set(self.blocks_dict[a]) & set(self.injectors)) for a in self.blocks_list}
         # eqclude cells from blocks list 
         if blocks_list_for_calc==None:
             blocks_list_for_calc = self.blocks_list
@@ -304,5 +321,5 @@ if __name__ == "__main__":
     SVA_blocks = filter(lambda t: t[:2]=="SV",t.block_inj_skin_table.columns)
     WS_blocks = filter(lambda t: t[:2]=="WS", t.block_inj_skin_table.columns)
     US_blocks = filter(lambda t: t[:2]=="US", t.block_inj_skin_table.columns)
-    t.plot_list(["SVA"])
+    #t.plot_list(["SVA"])
     
