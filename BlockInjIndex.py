@@ -208,6 +208,21 @@ class BlockInjIndex:
         e["P/I"] = e["producers"]/e["injectors"]
         self.prod_inj_ratio_nominal = e["P/I"]
 
+    def __kh_av_for_cells(self):
+        """
+        since for calculating of skins for each well 
+        pattern kh average need to be used 
+        table with averages will be calculated
+        """
+        df = self.WAF_table_blocks.copy()
+        df["well"] = df.index.droplevel(0)
+        df["block"] = df.index.droplevel(1)
+        df["kh"] = self.kh_table["kh"][df["well"]].values
+        df["khWAF"] = df["kh"]*df["WAF"]
+        u = df.groupby(level=0).sum()
+        u["kh_av"] = u['khWAF']/u['WAF']
+        self.kh_table_blocks = u["kh_av"]
+        
     def load_data(self):
         """
         loading input data
@@ -218,6 +233,7 @@ class BlockInjIndex:
         self.__cells_mapping()
         self.__blocks_mapping()        
         self.__nominal_prod_inj_ratio_calc()
+        self.__kh_av_for_cells()
     
     def __injectivity_skin_calc(self):
         """
