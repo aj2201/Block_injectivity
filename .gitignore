@@ -7,4 +7,7 @@
 *.xlsm
 *.jpg
 *.png
+*.ipynb
+*.lnk
+
 GUI/*
