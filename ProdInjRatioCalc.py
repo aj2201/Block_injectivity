@@ -70,44 +70,51 @@ class ProdInjRatioCalc(BlockInjIndex.BlockInjIndex):
          kh = self.kh_table_blocks[block]
          prods = list((set(self.blocks_dict[block]) - set(self.injectors))&set(self.pi_table.columns))
          injectors = list(set(self.blocks_dict[block]) & set(self.injectors))
-         #Pres
-         some_list = []
-         for i in prods:
-            if str(type(self.pres_table.get(i))) != "<type 'NoneType'>":
-               some_list.append( self.pres_table[i])
-         nPres = pd.DataFrame(some_list)
-         Pres = nPres.mean(skipna=True, axis=0)["Pres"]
-         #inj skin
-         beta_coef = -(pvt.PVTprops.p_avg_D_pat - np.log(2))
-         alpha = kh * pvt.PVTprops.krw_prime / pvt.PVTprops.mu_w / pvt.PVTprops.C
-         table = (self.bhp_table[injectors].T['avg_BhpInjTopPerfFaily']-Pres) / self.inj_table[injectors].T['InjRate']
-         block_inj_skins = pd.DataFrame(table.values*alpha, index=table.index, columns=table.columns) + beta_coef
-         #prod_skin
-         beta_coef = -(pvt.PVTprops.p_avg_D_well - np.log(2))
-         Prod_skins = ((1/self.pi_table[prods].T.copy())*alpha+beta_coef).T
-         Prod_skins.index = Prod_skins.index.droplevel()
-         #block Inj skin average
-         liq_rates = self.inj_table[injectors]
-         wafs = self.WAF_table_blocks["WAF"][block][injectors]
-         wafed_liqs = liq_rates * wafs
-         self.block_inj_skin_table_kh_av[block] = (block_inj_skins.T*wafed_liqs).T.sum() / wafed_liqs.T.sum()                 
-         self.block_inj_skin_table_kh_av[self.block_inj_skin_table>1000]=np.nan
-         self.block_inj_skin_table_kh_av.sort_index
-         #self.block_inj_skin_table_kh_av.index = self.block_inj_skin_table_kh_av.index.droplevel()
-         #block Prod skin average
-         skins = Prod_skins #self.prod_skin_table[prods]
-         deltaP = Pres - pvt.PVTprops.p_wf_P
-         #potential liq rates
-         liq_rates = pd.DataFrame((self.pi_table[prods].T.values * deltaP.values).T, \
-                        index = self.pi_table[prods].index.droplevel(), \
-                        columns=self.pi_table[prods].columns)
-         #self.Qliq_table[prods   ]
-         wafs = self.WAF_table_blocks["WAF"][block][prods]
-         wafed_liqs = liq_rates * wafs
-         self.block_prod_skin_table_kh_av[block] = \
-         pd.DataFrame(skins.values*wafed_liqs.values, \
-         index=wafed_liqs.index, columns=wafed_liqs.columns).T.sum()  \
-                     / wafed_liqs.T.sum()
+         if len(injectors)==0 or len(prods)==0:
+            self.block_prod_skin_table_kh_av[block] = np.nan
+            self.block_inj_skin_table_kh_av[block] = np.nan
+         else:
+            #Pres
+            some_list = []
+            for i in prods:
+               if str(type(self.pres_table.get(i))) != "<type 'NoneType'>":
+                  some_list.append( self.pres_table[i])
+            nPres = pd.DataFrame(some_list)
+            Pres = nPres.mean(skipna=True, axis=0)#["Pres"]
+            #Pres = Pres [:-1] #since in 90dp one more month 
+            #inj skin
+            beta_coef = -(pvt.PVTprops.p_avg_D_pat - np.log(2))
+            alpha = kh * pvt.PVTprops.krw_prime / pvt.PVTprops.mu_w / pvt.PVTprops.C
+            table = (self.bhp_table[injectors].T['avg_BhpInjTopPerfFaily']-Pres[:-1]) / self.inj_table[injectors].T['InjRate']
+            block_inj_skins = pd.DataFrame(table.values*alpha, index=table.index, columns=table.columns) + beta_coef
+            #prod_skin
+            beta_coef = -(pvt.PVTprops.p_avg_D_well - np.log(2))
+            Prod_skins = ((1/self.pi_table[prods].T.copy())*alpha+beta_coef).T
+            Prod_skins.index = Prod_skins.index.droplevel()
+            #block Inj skin average
+            liq_rates = self.inj_table[injectors]
+            wafs = self.WAF_table_blocks["WAF"][block][injectors]
+            wafed_liqs = liq_rates * wafs
+            self.block_inj_skin_table_kh_av[block] = \
+               pd.DataFrame(block_inj_skins.T.values*wafed_liqs.values, \
+                  index =block_inj_skins.T.index.droplevel(), \
+                     columns = block_inj_skins.T.columns ).T.sum() /wafed_liqs.T.sum().values
+            #was before            (block_inj_skins.T*wafed_liqs).T.sum() / wafed_liqs.T.sum()                 
+            self.block_inj_skin_table_kh_av[self.block_inj_skin_table_kh_av>1000]=np.nan
+            self.block_inj_skin_table_kh_av.sort_index
+            #self.block_inj_skin_table_kh_av.index = self.block_inj_skin_table_kh_av.index.droplevel()
+            #block Prod skin average
+            skins = Prod_skins #self.prod_skin_table[prods]
+            deltaP = Pres - pvt.PVTprops.p_wf_P
+            #potential liq rates
+            liq_rates = pd.DataFrame((self.pi_table[prods].T.values * deltaP.values).T, \
+                           index = self.pi_table[prods].index.droplevel(), \
+                           columns=self.pi_table[prods].columns)
+            #self.Qliq_table[prods   ]
+            wafs = self.WAF_table_blocks["WAF"][block][prods]
+            wafed_liqs = liq_rates * wafs
+            self.block_prod_skin_table_kh_av[block] = \
+                pd.DataFrame(skins.values*wafed_liqs.values,index=wafed_liqs.index, columns=wafed_liqs.columns).T.sum()/ wafed_liqs.T.sum() 
     
      
         
